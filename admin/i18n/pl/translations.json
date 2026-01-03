@@ -29,6 +29,6 @@
     "More information": "Więcej informacji",
     "Show Node Info messages to ioBroker log": "Pokaż komunikaty Node Info w dzienniku ioBroker",
     "Always refresh node infos": "Zawsze odświeżaj informacje o Node",
-    The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name: "Zdarzenia takie jak 'Urządzenie usunięte' lub 'Wyłączone' są wyświetlane w opisie zamiast w nazwie"
+    "The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name: "Zdarzenia takie jak 'Urządzenie usunięte' lub 'Wyłączone' są wyświetlane w opisie zamiast w nazwie"
 
 }
