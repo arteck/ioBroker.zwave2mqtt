@@ -407,12 +407,7 @@ class zwave2mqtt extends core.Adapter {
         payload: "",
       };
 
-      if (id.toLowerCase().includes(logCustomizations.debugDevices.toLowerCase())) {
-        this.log.warn(
-          `<<<--- zwave2mqtt ---> DEBUGMESSAGE Send -->> ${this.config.baseTopic}/${message.topic}   ${JSON.stringify(message.payload)}`,
-        );
-      }
-
+   
       if (["exmqtt", "intmqtt"].includes(this.config.connectionType)) {
         mqttClient.publish(
                                   `${this.config.baseTopic}/${message.topic}`,
