@@ -15,7 +15,7 @@
 
 ## zwave2mqtt adapter for ioBroker
 
-The `zwave2mqtt` adapter connects a `zwave-js-ui` to ioBroker and creates corresponding data points for devices, values, and statuses. This allows Z-Wave devices to be conveniently used in visualizations, logic, and automations.
+The `zwave2mqtt` adapter connects a [`zwave-js-ui`](https://zwave-js.github.io/zwave-js-ui/#/) to ioBroker and creates corresponding data points for devices, values, and statuses. This allows Z-Wave devices to be conveniently used in visualizations, logic, and automations.
 
 ## Adapter Documentation
 
