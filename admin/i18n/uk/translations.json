@@ -29,5 +29,5 @@
     "More information": "Більше інформації",
     "Show Node Info messages to ioBroker log": "Показувати повідомлення Node Info у журналі ioBroker",
     "Always refresh node infos": "Завжди оновлювати інформацію про вузли",
-    "The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name: "Події, такі як 'Пристрій видалено' або 'Вимкнено', відображаються в описі, а не в імені"
+    "The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name": "Події, такі як 'Пристрій видалено' або 'Вимкнено', відображаються в описі, а не в імені"
 }
