@@ -17,7 +17,6 @@ let deviceCache = {};
 let nodeCache = {};
 const logCustomizations = { debugDevices: "", logfilter: [] };
 
-let websocketController;
 let mqttServerController;
 let statesController;
 let helper;
@@ -69,8 +68,12 @@ class zwave2mqtt extends core.Adapter {
         // MQTT connection settings
         const mqttClientOptions = {
           clientId: `ioBroker.zwave2mqtt_${Math.random().toString(16).slice(2, 8)}`,
-          clean: true,
-          reconnectPeriod: 500,
+          clean: false,
+          protocolVersion: 4,
+          reconnectPeriod: 5000,
+          connectTimeout: 30000,  // 30s
+          keepalive: 30,
+          resubscribe: true,
         };
 
         // Set external mqtt credentials
