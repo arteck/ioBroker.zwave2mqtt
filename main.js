@@ -121,6 +121,8 @@ class zwave2mqtt extends core.Adapter {
   async messageParse(message) {
     let nodeId;
     let statusText;
+    let parsePath;
+    let value_update;
 
     // Mutex lock: queue up calls to messageParse
     let release;
@@ -158,7 +160,7 @@ class zwave2mqtt extends core.Adapter {
       const topicGateway = messageObj.topic.split("/")[1];
       const topicType = messageObj.topic.split("/")[2];
       const topicEventName = messageObj.topic.split("/")[3];
-
+      let value_update;
 
       if (this.config.renewNodeInfo) {
         for (const deviceKey in deviceCache) {
@@ -185,7 +187,7 @@ class zwave2mqtt extends core.Adapter {
                         delete deviceCache[deviceKey];
                       }
                     }
-                    
+
                     if (topicEventName === "node_interview_started") {
                       this.log.info(`Node Interview started for ${nodeId}, clearing cache to re-create states.`);
                       await this.delObjectAsync(nodeId, { recursive:true }); // delete all states of the node
@@ -256,8 +258,8 @@ class zwave2mqtt extends core.Adapter {
                       }
                       await this.setStateAsync(`${nodeId}.status`, statusText, true);
                     }
-                    const value_update = messageObj.payload?.data[1];
-                    let parsePath = `${nodeId}.${value_update.commandClassName}.${value_update.propertyName
+                    value_update = messageObj.payload?.data[1];
+                    parsePath = `${nodeId}.${value_update.commandClassName}.${value_update.propertyName
                                           .replace(/[^\p{L}\p{N}\s]/gu, "")
                                           .replace(/\s+/g, " ")
                                           .trim()}`;
