@@ -3,7 +3,6 @@
 const core = require("@iobroker/adapter-core");
 const mqtt = require("mqtt");
 const utils = require("./lib/utils");
-const { isNumeric } = require("./lib/utils");
 const constant = require("./lib/constants");
 
 const adapterInfo = require("./lib/messages").adapterInfo;
@@ -135,7 +134,7 @@ class zwave2mqtt extends core.Adapter {
       const messageObj = JSON.parse(message);
 
       const nodeElement = messageObj.topic.split("/")[0];
-      if (isNumeric(nodeElement)) {
+      if (utils.isNumeric(nodeElement)) {
         nodeId = utils.padNodeId(`nodeID_${nodeElement}`);
       }
 
@@ -215,7 +214,7 @@ class zwave2mqtt extends core.Adapter {
                     }
                     if (infoPayload?.status) {
                       statusText = infoPayload.status;
-                      if (isNumeric(statusText)) {
+                      if (utils.isNumeric(statusText)) {
                         statusText = utils.getStatusText(statusText);
                       }
                       await this.setStateAsync(`${nodeId}.status`, statusText, true);
@@ -231,7 +230,7 @@ class zwave2mqtt extends core.Adapter {
                     }
                     if (infoPayload?.status) {
                       statusText = infoPayload.status;
-                      if (isNumeric(statusText)) {
+                      if (utils.isNumeric(statusText)) {
                         statusText = utils.getStatusText(statusText);
                       }
                       await this.setStateAsync(`${nodeId}.status`, statusText, true);
@@ -253,11 +252,12 @@ class zwave2mqtt extends core.Adapter {
                     }
                     if (infoPayload?.status) {
                       statusText = infoPayload.status;
-                      if (isNumeric(statusText)) {
+                      if (utils.isNumeric(statusText)) {
                         statusText = utils.getStatusText(statusText);
                       }
                       await this.setStateAsync(`${nodeId}.status`, statusText, true);
                     }
+
                     value_update = messageObj.payload?.data[1];
                     parsePath = `${nodeId}.${value_update.commandClassName}.${value_update.propertyName
                                           .replace(/[^\p{L}\p{N}\s]/gu, "")
@@ -274,8 +274,17 @@ class zwave2mqtt extends core.Adapter {
                         parsePath = utils.replaceLastDot(parsePath);
                       }
                     }
-                    if (value_update.newValue !== value_update.prevValue) {
+
+                    if (value_update.newValue !== value_update.prevValue && value_update.property !== "name") {
                       await helper.parse(`${parsePath}`, value_update.newValue, options);
+                    }
+
+                    if (value_update.property === "name") {    // sonderlocke für name änderung
+
+                      await helper.updateDevice(nodeId, value_update);
+                      // dann info aktualisieren
+                      value_update = messageObj.payload?.data[0];
+                      await helper.parse(`${nodeId}.info`, value_update, options);
                     }
                     break;
                   default:
@@ -308,7 +317,7 @@ class zwave2mqtt extends core.Adapter {
         default:
           if (nodeId != null) {
             let commandClass = messageObj.topic.split("/")[1];
-            if (isNumeric(commandClass)) {
+            if (utils.isNumeric(commandClass)) {
               commandClass = messageObj.payload.commandClassName;
             }
 
@@ -330,7 +339,7 @@ class zwave2mqtt extends core.Adapter {
                 break;
               case "status":
                 statusText = messageObj.payload.status;
-                if (isNumeric(statusText)) {
+                if (utils.isNumeric(statusText)) {
                   statusText = utils.getStatusText(statusText);
                 }
                 await this.setStateAsync(`${nodeId}.status`, statusText, true);
@@ -407,7 +416,6 @@ class zwave2mqtt extends core.Adapter {
         payload: "",
       };
 
-   
       if (["exmqtt", "intmqtt"].includes(this.config.connectionType)) {
         mqttClient.publish(
                                   `${this.config.baseTopic}/${message.topic}`,
