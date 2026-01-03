@@ -19,7 +19,6 @@ This adapter allows to control the data points of the devices of a zwave2mqtt in
 
 ## Adapter Documentation
 
-[Adapter Documentation](https://github.com/arteck/ioBroker.zwave2mqtt/blob/main/docs/wiki.md)
 
 MQTT Settings 
 
