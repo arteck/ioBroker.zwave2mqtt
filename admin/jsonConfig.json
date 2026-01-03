@@ -249,6 +249,15 @@
           "md": 12,
           "lg": 12,
           "xl": 12
+        },
+         "useEventInDesc": {
+          "type": "checkbox",
+          "label": "The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name",
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
         }
       }
     }

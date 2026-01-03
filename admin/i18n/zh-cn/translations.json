@@ -28,5 +28,6 @@
   "MQTT Password": "MQTT 密码",
   "More information": "更多信息",
   "Show Node Info messages to ioBroker log": "在 ioBroker 日志中显示节点信息消息",
-  "Always refresh node infos": "始终刷新节点信息"
+  "Always refresh node infos": "始终刷新节点信息",
+  The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name: "诸如“设备已移除”或“已禁用”等事件显示在描述中，而不是名称中"
 }

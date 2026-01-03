@@ -28,5 +28,6 @@
     "MQTT Password": "Password MQTT",
     "More information": "Maggiori informazioni",
     "Show Node Info messages to ioBroker log": "Mostra i messaggi Node Info nel log di ioBroker",
-    "Always refresh node infos": "Aggiorna sempre le informazioni sui nodi"
+    "Always refresh node infos": "Aggiorna sempre le informazioni sui nodi",
+    The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name: "Gli eventi come 'Dispositivo rimosso' o 'Disabilitato' vengono visualizzati nella descrizione anziché nel nome"
 }

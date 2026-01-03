@@ -28,5 +28,6 @@
     "MQTT Password": "Пароль MQTT",
     "More information": "Больше информации",
     "Show Node Info messages to ioBroker log": "Показывать сообщения Node Info в журнале ioBroker",
-    "Always refresh node infos": "Всегда обновлять информацию о узлах"
+    "Always refresh node infos": "Всегда обновлять информацию о узлах",
+    The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name: "События, такие как 'Устройство удалено' или 'Отключено', отображаются в описании, а не в имени"
 }

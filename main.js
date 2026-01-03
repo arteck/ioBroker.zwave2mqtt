@@ -177,16 +177,35 @@ class zwave2mqtt extends core.Adapter {
               case "node":
                 switch (topicEventName) {
                   case "node_interview_started":
+                  case "node_removed":
                     delete nodeCache[nodeId];
-                    await this.delObjectAsync(nodeId, { recursive:true });
-                    this.log.info(
-                      `Node Interview started for ${nodeId}, clearing cache to re-create states.`,
-                    );
+
                     for (const deviceKey in deviceCache) {
                       if (deviceKey.includes(nodeId)) {
                         delete deviceCache[deviceKey];
                       }
                     }
+                    
+                    if (topicEventName === "node_interview_started") {
+                      this.log.info(`Node Interview started for ${nodeId}, clearing cache to re-create states.`);
+                      await this.delObjectAsync(nodeId, { recursive:true }); // delete all states of the node
+                    }
+
+                    if (topicEventName === "node_removed") {
+                      this.log.info(`Node ${nodeId} removed, clearing all states manually.`);
+
+                      const obj = await this.adapter.getObjectAsync(nodeId);
+                      if (obj) {
+                        if (this.config.useEventInDesc) {
+                          obj.common.desc = "Device removed by Z-Wave network";
+                        } else {
+                          obj.common.name = "Device removed";
+                        }
+                        obj.common = obj.common ?? {};
+                        await this.setObjectAsync(nodeId, obj);
+                      }
+                    }
+
                     break;
                   case "statistics_updated":
                     if (infoPayload?.ready) {
@@ -203,7 +222,6 @@ class zwave2mqtt extends core.Adapter {
                   case "node_wake_up":
                   case "node_sleep":
                   case "node_interview_failed":
-                  case "node_removed":
                   case "node_added":
                   case "node_interview_completed":
                     if (infoPayload?.ready) {
