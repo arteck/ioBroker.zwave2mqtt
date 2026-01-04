@@ -109,7 +109,13 @@
     ]
   },
   "native": {
-    "connectionType": "exmqtt",
+    "connectionType": "ws",
+    "wsScheme": "ws",
+    "wsServerIP": "",
+    "wsServerPort": 8080,
+    "wsTokenEnabled": false,
+    "wsToken": "",
+    "dummyMqtt": false,
     "baseTopic": "zwave",
     "externalMqttServerIP": "",
     "externalMqttServerPort": 1883,
@@ -126,10 +132,12 @@
     "useEventInDesc": false
   },
   "protectedNative": [
-    "externalMqttServerPassword"
+    "externalMqttServerPassword",
+    "wsToken"
   ],
   "encryptedNative": [
-    "externalMqttServerPassword"
+    "externalMqttServerPassword",
+    "wsToken"
   ],
   "objects": [],
   "instanceObjects": [

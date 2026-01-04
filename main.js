@@ -7,21 +7,29 @@ const constant = require("./lib/constants");
 
 const adapterInfo = require("./lib/messages").adapterInfo;
 const StatesController = require("./lib/statesController").StatesController;
+const WebsocketController = require('./lib/websocketController').WebsocketController;
 const Helper = require("./lib/helper").Helper;
 
-const MqttServerController =
-  require("./lib/mqttServerController").MqttServerController;
+const MqttServerController = require("./lib/mqttServerController").MqttServerController;
 
 let mqttClient;
 let deviceCache = {};
 let nodeCache = {};
 const logCustomizations = { debugDevices: "", logfilter: [] };
 
+let websocketController;
 let mqttServerController;
 let statesController;
 let helper;
 let messageParseMutex = Promise.resolve();
 let options = {};
+let startListening = false;
+
+let driver;
+let controller;
+let allNodes;
+let eventTyp;
+
 
 class zwave2mqtt extends core.Adapter {
   constructor(options) {
@@ -43,7 +51,6 @@ class zwave2mqtt extends core.Adapter {
     this.setState("info.connection", false, true);
     await statesController.setAllAvailableToFalse();
 
-    deviceCache = await statesController.subscribeAllWritableExistsStates();
     helper = new Helper(this, deviceCache);
 
     const debugDevicesState = await this.getStateAsync("info.debugId");
@@ -104,28 +111,63 @@ class zwave2mqtt extends core.Adapter {
 
       // MQTT Client
       mqttClient.on("connect", () => {
-        this.log.info(
-          `Connect to zwave2MQTT over ${this.config.connectionType == "exmqtt" ? "external mqtt" : "internal mqtt"} connection.`,
-        );
+        this.log.info(`Connect to zwave2MQTT over ${this.config.connectionType == "exmqtt" ? "external mqtt" : "internal mqtt"} connection.`);
+        this.setState("info.connection", true, true);
       });
 
       mqttClient.subscribe(`${this.config.baseTopic}/#`);
-
-      this.setState("info.connection", true, true);
 
       mqttClient.on("message", (topic, payload) => {
         const newMessage = `{"payload":${payload.toString() == "" ? '"null"' : payload.toString()},"topic":"${topic.slice(topic.search("/") + 1)}"}`;
         this.messageParse(newMessage);
       });
     }
+    // Websocket
+        else if (this.config.connectionType == 'ws') {
+            if (this.config.wsServerIP == '') {
+                this.log.warn('Please configure the Websoket connection!');
+                return;
+            }
+
+            // Dummy MQTT-Server
+            if (this.config.dummyMqtt == true) {
+                mqttServerController = new MqttServerController(this);
+                await mqttServerController.createDummyMQTTServer();
+                this.setState("info.connection", true, true);
+                await this.delay(1500);
+            }
+
+            this.startWebsocket();
+        }
   }
+  
+  startWebsocket() {
+      websocketController = new WebsocketController(this);
+      const wsClient = websocketController.initWsClient();
 
+      if (wsClient) {
+          wsClient.on('open', () => {
+              this.log.info('Connect to Zigbee2MQTT over websocket connection.');
+              startListening = true;
+              websocketController.send(JSON.stringify({command: "start_listening"}));
+          });
+
+          wsClient.on('message', (message) => {
+              this.messageParse(message);
+          });
+
+          wsClient.on('close', async () => {
+              this.setStateChanged('info.connection', false, true);
+              await statesController.setAllAvailableToFalse();
+              startListening = false;
+              deviceCache = [];
+              nodeCache = [];
+              this.log.info('Websocket connection closed. Attempting to reconnect...');
+          });
+      }
+  }
+  
   async messageParse(message) {
-    let nodeId;
-    let statusText;
-    let parsePath;
-    let value_update;
-
     // Mutex lock: queue up calls to messageParse
     let release;
     const lock = new Promise((resolve) => (release = resolve));
@@ -135,235 +177,90 @@ class zwave2mqtt extends core.Adapter {
 
     try {
       const messageObj = JSON.parse(message);
+      const type       = messageObj?.type;
 
-      const nodeElement = messageObj.topic.split("/")[0];
-      if (utils.isNumeric(nodeElement)) {
-        nodeId = utils.padNodeId(`nodeID_${nodeElement}`);
-      }
-
-      if (logCustomizations.debugDevices.length > 0) {
-        if (message.toLowerCase().includes(logCustomizations.debugDevices.toLowerCase())) {
-          this.log.warn(
-            `<<<--- zwave2mqtt ---> DEBUGMESSAGE -->>  ${JSON.stringify(
-              messageObj.payload,
-            )}`,
-          );
-        }
-      }
-
-      this.log.debug(`<zwave2mqtt>  1-topic : ${messageObj.topic}`);
-      this.log.debug(`<zwave2mqtt> 2-payload : ${messageObj.payload}`);
-
-      options = { write: false };
-
-      // <mqtt_prefix>/_EVENTS_/ZWAVE_GATEWAY-<mqtt_name>/<driver|node|controller>/<event_name>
-      // <mqtt_prefix>/_CLIENTS/ZWAVE_GATEWAY-<mqtt_name>/api/<api_name>/set
-      const topicEvent = messageObj.topic.split("/")[0];
-      const topicGateway = messageObj.topic.split("/")[1];
-      const topicType = messageObj.topic.split("/")[2];
-      const topicEventName = messageObj.topic.split("/")[3];
-      let value_update;
-
-      if (this.config.renewNodeInfo) {
-        for (const deviceKey in deviceCache) {
-          if (deviceKey.includes(nodeId)) {
-            delete deviceCache[deviceKey];
-          }
-        }
-      }
-
-      switch (topicEvent) {
-        case "_EVENTS":
-          {
-            const infoPayload = messageObj.payload?.data?.[0] || {};
-            nodeId = utils.padNodeId(`nodeID_${infoPayload.id}`);
-            switch (topicType) {
-              case "node":
-                switch (topicEventName) {
-                  case "node_interview_started":
-                  case "node_removed":
-                    delete nodeCache[nodeId];
-
-                    for (const deviceKey in deviceCache) {
-                      if (deviceKey.includes(nodeId)) {
-                        delete deviceCache[deviceKey];
-                      }
-                    }
-
-                    if (topicEventName === "node_interview_started") {
-                      this.log.info(`Node Interview started for ${nodeId}, clearing cache to re-create states.`);
-                      await this.delObjectAsync(nodeId, { recursive:true }); // delete all states of the node
-                    }
-
-                    if (topicEventName === "node_removed") {
-                      this.log.info(`Node ${nodeId} removed, clearing all states manually.`);
-
-                      const obj = await this.adapter.getObjectAsync(nodeId);
-                      if (obj) {
-                        if (this.config.useEventInDesc) {
-                          obj.common.desc = "Device removed by Z-Wave network";
-                        } else {
-                          obj.common.name = "Device removed";
-                        }
-                        obj.common = obj.common ?? {};
-                        await this.setObjectAsync(nodeId, obj);
-                      }
-                    }
-
-                    break;
-                  case "statistics_updated":
-                    if (infoPayload?.ready) {
-                      await this.setStateAsync(`${nodeId}.ready`, infoPayload?.ready, true);
-                    }
-                    if (infoPayload?.status) {
-                      statusText = infoPayload.status;
-                      if (utils.isNumeric(statusText)) {
-                        statusText = utils.getStatusText(statusText);
-                      }
-                      await this.setStateAsync(`${nodeId}.status`, statusText, true);
-                    }
-                    break;
-                  case "node_wake_up":
-                  case "node_sleep":
-                  case "node_interview_failed":
-                  case "node_added":
-                  case "node_interview_completed":
-                    if (infoPayload?.ready) {
-                      await this.setStateAsync(`${nodeId}.ready`, infoPayload?.ready, true);
-                    }
-                    if (infoPayload?.status) {
-                      statusText = infoPayload.status;
-                      if (utils.isNumeric(statusText)) {
-                        statusText = utils.getStatusText(statusText);
-                      }
-                      await this.setStateAsync(`${nodeId}.status`, statusText, true);
-                    }
-                    if (!nodeCache[nodeId]) {
-                      if (this.config.showNodeInfoMessage) {
-                         this.log.info(`Node Info Update for ${nodeId}`);
-                      }
-                      nodeCache[nodeId] = {nodeId: nodeId};
-                    }
-                    await helper.parse(`${nodeId}.info`, messageObj.payload?.data[0], options);
-
-                    break;
-                  case "node_metadata_updated":
-                    break;
-                  case "node_value_updated":
-                    if (infoPayload?.ready) {
-                      await this.setStateAsync(`${nodeId}.ready`, infoPayload?.ready, true);
-                    }
-                    if (infoPayload?.status) {
-                      statusText = infoPayload.status;
-                      if (utils.isNumeric(statusText)) {
-                        statusText = utils.getStatusText(statusText);
-                      }
-                      await this.setStateAsync(`${nodeId}.status`, statusText, true);
-                    }
-
-                    value_update = messageObj.payload?.data[1];
-                    parsePath = `${nodeId}.${value_update.commandClassName}.${value_update.propertyName
-                                          .replace(/[^\p{L}\p{N}\s]/gu, "")
-                                          .replace(/\s+/g, " ")
-                                          .trim()}`;
-
-                    if (value_update?.propertyKeyName) {
-                      parsePath = `${parsePath}.${value_update.propertyKeyName
-                          .replace(/[^\p{L}\p{N}\s]/gu, "")
-                          .replace(/\s+/g, " ")
-                          .trim()}`;
-
-                      if (constant.RGB.includes(value_update.propertyKeyName)) {
-                        parsePath = utils.replaceLastDot(parsePath);
-                      }
-                    }
-
-                    if (value_update.newValue !== value_update.prevValue && value_update.property !== "name") {
-                      await helper.parse(`${parsePath}`, value_update.newValue, options);
-                    }
-
-                    if (value_update.property === "name") {    // sonderlocke für name änderung
-
-                      await helper.updateDevice(nodeId, value_update);
-                      // dann info aktualisieren
-                      value_update = messageObj.payload?.data[0];
-                      await helper.parse(`${nodeId}.info`, value_update, options);
-                    }
-                    break;
-                  default:
-                    break;
-                }
+      if (this.config.connectionType === 'ws') {
+        switch (type) {
+          case 'version':       // say hello
+            this.setStateChanged('info.connection', true, true);
+            this.setStateChanged('info.zwave_gateway_version', messageObj.driverVersion, true);
+            this.setStateChanged('info.zwave_gateway_status', 'online', true);
+            break;
+          case 'result':
+            if  (messageObj.result?.success === true) {
+                this.setStateChanged('info.debugmessages', JSON.stringify(messageObj), true);
                 break;
-              case "controller":
-                  break;
-              case "driver":
-                  break;
-              default:
-                  break;
-            }
-          }
-          break;
-        case "_CLIENTS":
-          switch (topicType) {
-            case "status":
-                 this.setStateChanged("info.zwave_gateway_status", messageObj.payload.value ? "online" : "offline", true);
-                 break;
-               case "version":
-                this.setStateChanged("info.zwave_gateway_version", messageObj.payload.value, true);
-                this.setStateChanged("info.zwave_gateway_status", "online", true);
-                break;
-
-              default:
-                break;
-          }
-          break;
-        default:
-          if (nodeId != null) {
-            let commandClass = messageObj.topic.split("/")[1];
-            if (utils.isNumeric(commandClass)) {
-              commandClass = messageObj.payload.commandClassName;
             }
 
-            switch (commandClass) {
-              case "nodeinfo":
-                if (!nodeCache[nodeId]) {
+            driver = messageObj.result.state.driver;
+            controller = messageObj.result.state.controller;
+            allNodes = messageObj.result.state.nodes;
+
+            for (const nodeData of allNodes) {
+              const nodeId = utils.formatNodeId(nodeData.nodeId);
+              if (!nodeCache[nodeId]) {
                   if (this.config.showNodeInfoMessage) {
                      this.log.info(`Node Info Update for ${nodeId}`);
                   }
                   nodeCache[nodeId] = {nodeId: nodeId};
+              }
+              await helper.createNode(`${nodeId}`, nodeData, options);
+            }
+
+            if (startListening) {
+              websocketController.send(JSON.stringify({command: "start_listening"}));
+              startListening = false;
+            }
+            break;
+          case 'event':
+            eventTyp = messageObj.event;
+
+            switch (eventTyp.event) {
+              case 'statistics updated':
+              case 'metadata updated':
+                break;
+              case 'value updated':
+                const nodeArg = eventTyp.args;
+                let nodeIdOriginal = eventTyp.nodeId;
+                let nodeId = utils.formatNodeId(nodeIdOriginal)
+
+                let parsePath = `${nodeId}.${nodeArg.commandClassName}.${nodeArg.propertyName
+                                      .replace(/[^\p{L}\p{N}\s]/gu, "")
+                                      .replace(/\s+/g, " ")
+                                      .trim()}`;
+                if (nodeArg?.propertyKeyName) {
+                    parsePath = `${parsePath}.${nodeArg.propertyKeyName
+                      .replace(/[^\p{L}\p{N}\s]/gu, "")
+                      .replace(/\s+/g, " ")
+                      .trim()}`;
+
+                  if (constant.RGB.includes(nodeArg.propertyKeyName)) {
+                    parsePath = utils.replaceLastDot(parsePath);
+                  }
                 }
-                await helper.parse(`${nodeId}.info`, messageObj.payload, options);
+
+                this.log.debug(`${parsePath} ->> ${nodeArg.newValue}`);
+
+                await helper.parse(`${parsePath}`, nodeArg.newValue, options);
 
                 break;
-              case "lastActive":
-                if (deviceCache[`${nodeId}.info.lastActive`]) {
-                  await this.setStateAsync(`${nodeId}.info.lastActive`, messageObj.payload.value, true);
-                }
-                break;
-              case "status":
-                statusText = messageObj.payload.status;
-                if (utils.isNumeric(statusText)) {
-                  statusText = utils.getStatusText(statusText);
-                }
-                await this.setStateAsync(`${nodeId}.status`, statusText, true);
-                await this.setStateAsync(`${nodeId}.ready`, messageObj.payload.value, true);
+              case 'sleep':
+              case 'wake up':
+              case 'value added':
                 break;
               default:
-                if (messageObj.topic.endsWith('/set')) {
-                  this.setState("info.debugmessages",`ACK : ${nodeId} ${messageObj.topic} ${JSON.stringify(messageObj.payload)}`, true);
-                } else {
-                  await helper.parse(messageObj.topic, messageObj.payload, options);
-                }
+                this.log.warn('New type event ->> ' + eventTyp.event);
                 break;
             }
-          }
-          break;
-      }
 
-      await statesController.subscribeWritableStates(deviceCache);
+            break;
+          default:
+            break;
+        }
+      }
     } catch (err) {
       this.log.error(err);
-      this.log.error(`<zwave2mqtt> error message ${message}`);
+      this.log.error(`<zwave2mqtt> error message -->> ${message}`);
     } finally {
       release();
     }
@@ -414,17 +311,27 @@ class zwave2mqtt extends core.Adapter {
         return;
       }
 
-      const message = (await helper.createZ2mMessage(id, state)) || {
-        topic: "",
-        payload: "",
-      };
+      let message;
+      const obj = await this.getObjectAsync(id);
+      if (obj) {
+          const nativeObj= obj.native || {};
 
-      if (["exmqtt", "intmqtt"].includes(this.config.connectionType)) {
-        mqttClient.publish(
-                                  `${this.config.baseTopic}/${message.topic}`,
-                                  JSON.stringify(message.payload),
-        );
+          const m = id.match(/nodeID_0*(\d+)/i);
+          const nodeId = m ? Number(m[1]) : null;
+
+          message = {
+              messageId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              command: "node.set_value",
+              nodeId: nodeId,
+              valueId: nativeObj.valueId,
+              value: state.val
+            }
       }
+      this.setStateChanged('info.debugmessages', JSON.stringify(message), true);
+
+      this.log.debug(`<zwave2mqtt> error message ${message}`);
+
+      websocketController.send(JSON.stringify(message));
     }
   }
 }
