@@ -216,9 +216,6 @@ class zwave2mqtt extends core.Adapter {
             eventTyp = messageObj.event;
 
             switch (eventTyp.event) {
-              case 'statistics updated':
-              case 'metadata updated':
-                break;
               case 'value updated':
                 const nodeArg = eventTyp.args;
                 let nodeIdOriginal = eventTyp.nodeId;
@@ -239,11 +236,28 @@ class zwave2mqtt extends core.Adapter {
                   }
                 }
 
+                if (nodeArg.commandClass === 119) {    // sonderlocke für node naming
+                     switch (nodeArg.property) {
+                         case 'name':
+                             await helper.updateDevice(nodeId, nodeArg);
+                             parsePath = `${nodeId}.info`;
+                             break;
+                         case 'location':
+                             parsePath = `${nodeId}.info.${nodeArg.property}`;
+
+                             break;
+                         default:
+                             break;
+                     }
+                 }
+
                 this.log.debug(`${parsePath} ->> ${nodeArg.newValue}`);
 
                 await helper.parse(`${parsePath}`, nodeArg.newValue, options);
 
                 break;
+              case 'statistics updated':
+              case 'metadata updated':
               case 'sleep':
               case 'wake up':
               case 'value added':
