@@ -29,5 +29,7 @@
     "More information": "Meer informatie",
     "Show Node Info messages to ioBroker log": "Toon Node Info-berichten in het ioBroker-logboek",
     "Always refresh node infos": "Ververs node-informatie altijd",
-    "The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name": "Evenementen zoals 'Apparaat verwijderd' of 'Uitgeschakeld' worden weergegeven in de beschrijving in plaats van in de naam"
+    "The events such as 'Device removed' or 'Disabled' are displayed in the description instead of in the name": "Evenementen zoals 'Apparaat verwijderd' of 'Uitgeschakeld' worden weergegeven in de beschrijving in plaats van in de naam",
+    "Inform about wake up and sleep of battery devices in the log": "Informeer over het wakker worden en slapen van batterijapparaten in het logboek",
+    "new Type event Warning in log": "nieuw Type gebeurtenis Waarschuwing in log"
 }

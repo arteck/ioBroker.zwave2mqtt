@@ -257,15 +257,37 @@ class zwave2mqtt extends core.Adapter {
 
                       break;
                   }
+
+                  case 'firmware update progress': {
+                    const total = Number(eventTyp.totalFragments) || 0;
+                    const sent = Number(eventTyp.sentFragments) || 0;
+
+                    const progress = total > 0 ? Math.min(100, Math.max(0, (sent / total) * 100)) : 0;
+
+                    this.log.info(
+                      `Firmware update progress for ${utils.formatNodeId(eventTyp.nodeId)} ->> ` + `send Fragments ${sent} -- total ${total} 
+                        (${progress.toFixed(1)}%)`);
+                    break;
+                  }
+
+                  case 'sleep':
+                  case 'wake up': {
+                      if (this.config.wakeUpInfo) {
+                          this.log.info(`${utils.formatNodeId(eventTyp.nodeId)} --> ${eventTyp.event}`);
+                      }
+                      break;
+                  }
+
                   case 'statistics updated':
                   case 'metadata updated':
-                  case 'sleep':
-                  case 'wake up':
                   case 'value added':
                   case 'node info received':
                     break;
                 default:
-                    this.log.warn(`New type event ->> ${eventTyp.event}`);
+                    if (this.config.newTypeEvent) {
+                        this.log.warn(`New type event ->> ${eventTyp.event}`);
+                        this.log.warn(JSON.stringify(messageObj));
+                    }
                     break;
             }
 
@@ -283,21 +305,29 @@ class zwave2mqtt extends core.Adapter {
   }
 
   async onUnload(callback) {
-      
-    // Clear all websocket timers
-    if (this.config.connectionType == 'ws') {
-        // Websocket
-            try {
-                if (websocketController) {
-                    websocketController.closeConnection();
-                    await websocketController.allTimerClear();
-                }
-            } catch (e) {
-                this.log.error(e);
-            }
+    // Close MQTT connections
+    if (["exmqtt", "intmqtt"].includes(this.config.connectionType)) {
+      if (mqttClient && !mqttClient.closed) {
+        try {
+          if (mqttClient) {
+            mqttClient.end();
+          }
+        } catch (e) {
+          this.log.error(e);
+        }
+      }
     }
-
-     // Set all device available states of false
+    // Internal or Dummy MQTT-Server
+    if (this.config.connectionType == "intmqtt" || this.config.dummyMqtt == true) {
+      try {
+        if (mqttServerController) {
+          mqttServerController.closeServer();
+        }
+      } catch (e) {
+        this.log.error(e);
+      }
+    }
+    // Set all device available states of false
     try {
       if (statesController) {
         await statesController.setAllAvailableToFalse();

@@ -322,6 +322,24 @@
           "md": 12,
           "lg": 12,
           "xl": 12
+        },
+        "wakeUpInfo": {
+          "type": "checkbox",
+          "label": "Inform about wake up and sleep of battery devices in the log",
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
+        },
+        "newTypeEvent": {
+          "type": "checkbox",
+          "label": "new Type event Warning in log",
+          "xs": 12,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "xl": 12
         }
       }
     }

@@ -142,7 +142,9 @@
     "webUIPort": 8091,
     "showNodeInfoMessages": true,
     "renewNodeInfo": true,
-    "useEventInDesc": false
+    "useEventInDesc": false,
+    "wakeUpInfo": false,
+    "newTypeEvent": true
   },
   "protectedNative": [
     "externalMqttServerPassword",
