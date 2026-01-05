@@ -121,9 +121,8 @@ class zwave2mqtt extends core.Adapter {
         const newMessage = `{"payload":${payload.toString() == "" ? '"null"' : payload.toString()},"topic":"${topic.slice(topic.search("/") + 1)}"}`;
         this.messageParse(newMessage);
       });
-    }
+    } else if (this.config.connectionType == 'ws') {
     // Websocket
-        else if (this.config.connectionType == 'ws') {
             if (this.config.wsServerIP == '') {
                 this.log.warn('Please configure the Websoket connection!');
                 return;
@@ -181,91 +180,93 @@ class zwave2mqtt extends core.Adapter {
 
       if (this.config.connectionType === 'ws') {
         switch (type) {
-          case 'version':       // say hello
-            this.setStateChanged('info.connection', true, true);
-            this.setStateChanged('info.zwave_gateway_version', messageObj.driverVersion, true);
-            this.setStateChanged('info.zwave_gateway_status', 'online', true);
-            break;
-          case 'result':
-            if  (messageObj.result?.success === true) {
-                this.setStateChanged('info.debugmessages', JSON.stringify(messageObj), true);
+            case 'version': {      // say hello
+                this.setStateChanged('info.connection', true, true);
+                this.setStateChanged('info.zwave_gateway_version', messageObj.driverVersion, true);
+                this.setStateChanged('info.zwave_gateway_status', 'online', true);
                 break;
             }
-
-            driver = messageObj.result.state.driver;
-            controller = messageObj.result.state.controller;
-            allNodes = messageObj.result.state.nodes;
-
-            for (const nodeData of allNodes) {
-              const nodeId = utils.formatNodeId(nodeData.nodeId);
-              if (!nodeCache[nodeId]) {
-                  if (this.config.showNodeInfoMessage) {
-                     this.log.info(`Node Info Update for ${nodeId}`);
-                  }
-                  nodeCache[nodeId] = {nodeId: nodeId};
-              }
-              await helper.createNode(`${nodeId}`, nodeData, options);
-            }
-
-            if (startListening) {
-              websocketController.send(JSON.stringify({command: "start_listening"}));
-              startListening = false;
-            }
-            break;
-          case 'event':
-            eventTyp = messageObj.event;
-
-            switch (eventTyp.event) {
-              case 'value updated':
-                const nodeArg = eventTyp.args;
-                let nodeIdOriginal = eventTyp.nodeId;
-                let nodeId = utils.formatNodeId(nodeIdOriginal)
-
-                let parsePath = `${nodeId}.${nodeArg.commandClassName}.${nodeArg.propertyName
-                                      .replace(/[^\p{L}\p{N}\s]/gu, "")
-                                      .replace(/\s+/g, " ")
-                                      .trim()}`;
-                if (nodeArg?.propertyKeyName) {
-                    parsePath = `${parsePath}.${nodeArg.propertyKeyName
-                      .replace(/[^\p{L}\p{N}\s]/gu, "")
-                      .replace(/\s+/g, " ")
-                      .trim()}`;
-
-                  if (constant.RGB.includes(nodeArg.propertyKeyName)) {
-                    parsePath = utils.replaceLastDot(parsePath);
-                  }
+            case 'result': {
+                if (messageObj.result?.success === true) {
+                    this.setStateChanged('info.debugmessages', JSON.stringify(messageObj), true);
+                    break;
                 }
 
-                if (nodeArg.commandClass === 119) {    // sonderlocke für node naming
-                     switch (nodeArg.property) {
-                         case 'name':
-                             await helper.updateDevice(nodeId, nodeArg);
-                             parsePath = `${nodeId}.info.${nodeArg.property}`;
-                             break;
-                         case 'location':
+                driver = messageObj.result.state.driver;
+                controller = messageObj.result.state.controller;
+                allNodes = messageObj.result.state.nodes;
 
-                             break;
-                         default:
-                             parsePath = `${nodeId}.info.${nodeArg.property}`;
-                             break;
-                     }
-                 }
+                for (const nodeData of allNodes) {
+                    const nodeId = utils.formatNodeId(nodeData.nodeId);
+                    if (!nodeCache[nodeId]) {
+                        if (this.config.showNodeInfoMessage) {
+                            this.log.info(`Node Info Update for ${nodeId}`);
+                        }
+                        nodeCache[nodeId] = {nodeId: nodeId};
+                    }
+                    await helper.createNode(`${nodeId}`, nodeData, options);
+                }
 
-                this.log.debug(`${parsePath} ->> ${nodeArg.newValue}`);
-
-                await helper.parse(`${parsePath}`, nodeArg.newValue, options);
-
+                if (startListening) {
+                    websocketController.send(JSON.stringify({command: "start_listening"}));
+                    startListening = false;
+                }
                 break;
-              case 'statistics updated':
-              case 'metadata updated':
-              case 'sleep':
-              case 'wake up':
-              case 'value added':
-              case 'node info received':
-                break;
-              default:
-                this.log.warn('New type event ->> ' + eventTyp.event);
-                break;
+            }
+            case 'event':
+                eventTyp = messageObj.event;
+
+                switch (eventTyp.event) {
+                  case 'value updated': {
+                      const nodeArg = eventTyp.args;
+                      const nodeId = utils.formatNodeId(eventTyp.nodeId);
+
+                      let parsePath = `${nodeId}.${nodeArg.commandClassName}.${nodeArg.propertyName
+                          .replace(/[^\p{L}\p{N}\s]/gu, "")
+                          .replace(/\s+/g, " ")
+                          .trim()}`;
+                      if (nodeArg?.propertyKeyName) {
+                          parsePath = `${parsePath}.${nodeArg.propertyKeyName
+                              .replace(/[^\p{L}\p{N}\s]/gu, "")
+                              .replace(/\s+/g, " ")
+                              .trim()}`;
+
+                          if (constant.RGB.includes(nodeArg.propertyKeyName)) {
+                              parsePath = utils.replaceLastDot(parsePath);
+                          }
+                      }
+
+                      if (nodeArg.commandClass === 119) {    // sonderlocke für node naming
+                          switch (nodeArg.property) {
+                              case 'name':
+                                  await helper.updateDevice(nodeId, nodeArg);
+                                  parsePath = `${nodeId}.info.${nodeArg.property}`;
+                                  break;
+                              case 'location':
+
+                                  break;
+                              default:
+                                  parsePath = `${nodeId}.info.${nodeArg.property}`;
+                                  break;
+                          }
+                      }
+
+                      this.log.debug(`${parsePath} ->> ${nodeArg.newValue}`);
+
+                      await helper.parse(`${parsePath}`, nodeArg.newValue, options);
+
+                      break;
+                  }
+                  case 'statistics updated':
+                  case 'metadata updated':
+                  case 'sleep':
+                  case 'wake up':
+                  case 'value added':
+                  case 'node info received':
+                    break;
+                default:
+                    this.log.warn(`New type event ->> ${eventTyp.event}`);
+                    break;
             }
 
             break;
