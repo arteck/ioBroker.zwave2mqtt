@@ -269,9 +269,15 @@ class zwave2mqtt extends core.Adapter {
                         (${progress.toFixed(1)}%)`);
                     break;
                   }
-
+                  case 'firmware update finished': {
+                      this.log.info(`${utils.formatNodeId(eventTyp.nodeId)} --> ${eventTyp.event}`);
+                    break;
+                  }
+                  case 'ready':
                   case 'sleep':
-                  case 'wake up': {
+                  case 'wake up':
+                  case 'alive':
+                  case 'dead': {
                       if (this.config.wakeUpInfo) {
                           this.log.info(`${utils.formatNodeId(eventTyp.nodeId)} --> ${eventTyp.event}`);
                       }
@@ -282,10 +288,14 @@ class zwave2mqtt extends core.Adapter {
                   case 'metadata updated':
                   case 'value added':
                   case 'node info received':
+                  case 'interview started':
+                  case 'interview stage completed':
+                    case 'interview failed':
                     break;
                 default:
                     if (this.config.newTypeEvent) {
                         this.log.warn(`New type event ->> ${eventTyp.event}`);
+
                         this.log.warn(JSON.stringify(messageObj));
                     }
                     break;
