@@ -288,6 +288,13 @@ class zwave2mqtt extends core.Adapter {
                       break;
                   }
 
+                  case 'node removed': {
+                        const nodeId = utils.formatNodeId(eventTyp.nodeId);
+                        const nodeArg = {name : 'Node is Deleted'};
+                        await helper.updateDevice(nodeId, nodeArg);
+                        break;
+                  }
+
                   case 'statistics updated':
                   case 'metadata updated':
                   case 'value added':
@@ -299,7 +306,6 @@ class zwave2mqtt extends core.Adapter {
                 default:
                     if (this.config.newTypeEvent) {
                         this.log.warn(`New type event ->> ${eventTyp.event}`);
-
                         this.log.warn(JSON.stringify(messageObj));
                     }
                     break;
