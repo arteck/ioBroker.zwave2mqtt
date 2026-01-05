@@ -240,13 +240,13 @@ class zwave2mqtt extends core.Adapter {
                      switch (nodeArg.property) {
                          case 'name':
                              await helper.updateDevice(nodeId, nodeArg);
-                             parsePath = `${nodeId}.info`;
+                             parsePath = `${nodeId}.info.${nodeArg.property}`;
                              break;
                          case 'location':
-                             parsePath = `${nodeId}.info.${nodeArg.property}`;
 
                              break;
                          default:
+                             parsePath = `${nodeId}.info.${nodeArg.property}`;
                              break;
                      }
                  }
