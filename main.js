@@ -292,6 +292,7 @@ class zwave2mqtt extends core.Adapter {
                         const nodeId = utils.formatNodeId(eventTyp.nodeId);
                         const nodeArg = {name : 'Node is Deleted'};
                         await helper.updateDevice(nodeId, nodeArg);
+                        this.log.error(`Delete ${utils.formatNodeId(eventTyp.nodeId)}`);
                         break;
                   }
 
