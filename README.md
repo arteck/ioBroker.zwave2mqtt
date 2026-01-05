@@ -34,7 +34,7 @@ we use the Home Assistant Settings for this:
 
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.0.2 (2026-01-05)
 - (arteck) beta
 
 ### 0.0.1 (2026-01-01)

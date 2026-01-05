@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "zwave2mqtt",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "news": {
+      "0.0.2": {
+        "en": "beta",
+        "de": "beta",
+        "ru": "бета",
+        "pt": "beta",
+        "nl": "beta",
+        "fr": "bêta",
+        "it": "beta",
+        "es": "beta",
+        "pl": "beta",
+        "uk": "бета",
+        "zh-cn": "贝塔"
+      },
       "0.0.1": {
         "en": "init",
         "de": "init",
