@@ -22,9 +22,12 @@ TBC
 ## Adapter Documentation
 
 
-MQTT Settings in `zwave-js-ui`
+WS Server Settings in `zwave-js-ui`
 
-<img width="1963" height="1187" alt="settings" src="https://github.com/user-attachments/assets/3768b4e1-e75c-4b09-8e28-5c2afe67060a" />
+we use the Home Assistant Settings for this:
+
+<img width="1959" height="786" alt="grafik" src="https://github.com/user-attachments/assets/9731b94f-a25f-41fd-bdc0-0236ecb4130b" />
+
 
 
 
