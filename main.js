@@ -283,29 +283,21 @@ class zwave2mqtt extends core.Adapter {
   }
 
   async onUnload(callback) {
-    // Close MQTT connections
-    if (["exmqtt", "intmqtt"].includes(this.config.connectionType)) {
-      if (mqttClient && !mqttClient.closed) {
-        try {
-          if (mqttClient) {
-            mqttClient.end();
-          }
-        } catch (e) {
-          this.log.error(e);
-        }
-      }
+      
+    // Clear all websocket timers
+    if (this.config.connectionType == 'ws') {
+        // Websocket
+            try {
+                if (websocketController) {
+                    websocketController.closeConnection();
+                    await websocketController.allTimerClear();
+                }
+            } catch (e) {
+                this.log.error(e);
+            }
     }
-    // Internal or Dummy MQTT-Server
-    if (this.config.connectionType == "intmqtt" || this.config.dummyMqtt == true) {
-      try {
-        if (mqttServerController) {
-          mqttServerController.closeServer();
-        }
-      } catch (e) {
-        this.log.error(e);
-      }
-    }
-    // Set all device available states of false
+
+     // Set all device available states of false
     try {
       if (statesController) {
         await statesController.setAllAvailableToFalse();
