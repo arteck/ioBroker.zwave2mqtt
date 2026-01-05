@@ -261,6 +261,7 @@ class zwave2mqtt extends core.Adapter {
               case 'sleep':
               case 'wake up':
               case 'value added':
+              case 'node info received':
                 break;
               default:
                 this.log.warn('New type event ->> ' + eventTyp.event);
