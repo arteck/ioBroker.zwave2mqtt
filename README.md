@@ -34,7 +34,7 @@ we use the Home Assistant Settings for this:
 
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.0.3 (2026-01-05)
 * (arteck) add Firmware update process
 * (arteck) add wakeup info
 * (arteck) newTypeEvent as warning is configurable
