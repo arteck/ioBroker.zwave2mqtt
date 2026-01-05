@@ -34,6 +34,9 @@ we use the Home Assistant Settings for this:
 
 
 ## Changelog
+### 0.0.4 (2026-01-05)
+* (arteck) fix undefined overrideState DP
+
 ### 0.0.3 (2026-01-05)
 * (arteck) add Firmware update process
 * (arteck) add wakeup info

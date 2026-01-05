@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "zwave2mqtt",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "news": {
+      "0.0.4": {
+        "en": "fix undefined overrideState DP",
+        "de": "undefiniertes Override beheben Staat",
+        "ru": "исправление неопределенного переопределения Государство ДП",
+        "pt": "corrigir sobreposição indefinida Estado DP",
+        "nl": "ongedefinieerde override repareren Staat DP",
+        "fr": "correction d'une redéfinition non définie État DP",
+        "it": "correzione di override non definita Stato DP",
+        "es": "fijar la anulación indefinida State DP",
+        "pl": "fix nieokreślone sterowanie Państwo DP",
+        "uk": "виправити undefined override Державний ДП",
+        "zh-cn": "修复未定义的覆盖 国家DP"
+      },
       "0.0.3": {
         "en": "add Firmware update process\nadd wakeup info\nnewTypeEvent as warning is configurable",
         "de": "firmware-Update-Prozess hinzufügen\nweck-info hinzufügen\nneue TypeEvent als Warnung konfigurierbar",
