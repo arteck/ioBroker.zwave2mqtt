@@ -1,4 +1,4 @@
 
 
 
-Adaper wurde umbenant   https://github.com/arteck/ioBroker.zwaveWS
+Adaper wurde umbenant   https://github.com/arteck/ioBroker.zwavews
